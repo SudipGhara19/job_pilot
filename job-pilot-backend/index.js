@@ -11,6 +11,7 @@ const app = express();
 app.use(express.json());
 
 const allowedOrigins = [
+  "https://job-pilot-dun.vercel.app",
   "http://localhost:3000",
 ];
 
