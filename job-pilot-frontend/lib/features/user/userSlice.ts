@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 export interface Company {
+  logo?: string
   companyName: string
   organizationType? : string
   industryType?: string
