@@ -10,9 +10,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
-import axios from "axios";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setCurrentUser } from "@/lib/features/user/userSlice";
+import { RootState } from "@/lib/store";
+import api from "@/lib/axios";
+import axios from "axios";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,7 +39,7 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5505/api/auth/login", {
+      const res = await api.post("/api/auth/login", {
         email: formData.email,
         password: formData.password,
       });

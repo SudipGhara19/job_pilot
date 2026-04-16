@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
+import api from "@/lib/axios";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { setCurrentUser } from "@/lib/features/user/userSlice";
@@ -47,7 +48,7 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5505/api/auth/signup", {
+      const res = await api.post("/api/auth/signup", {
         fullName: formData.fullName,
         username: formData.username,
         email: formData.email,

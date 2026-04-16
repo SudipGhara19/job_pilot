@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import { setCurrentUser } from "@/lib/features/user/userSlice";
+import api from "@/lib/axios";
 import axios from "axios";
 import Image from "next/image";
 import logo from "@/public/images/auth/logo.png";
@@ -91,14 +92,9 @@ export default function AccountSetupPage() {
         submitData.append("logo", logoFile);
       }
 
-      const res = await axios.patch(
-        "http://localhost:5505/api/user/update-company",
-        submitData,
-        {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`,
-          },
-        }
+      const res = await api.patch(
+        "/api/user/update-company",
+        submitData
       );
 
       // Update local Redux store user object preserving the rest
