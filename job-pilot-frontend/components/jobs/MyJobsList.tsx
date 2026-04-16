@@ -9,9 +9,16 @@ import delete01 from "@/public/images/common/delete-01.png";
 import checkmark from "@/public/images/common/checkmark-circle-02.png";
 import usersGroup3 from "@/public/images/common/user-group-03.png";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
-import {
-  Briefcase, AlertCircle, MoreVertical,
-} from "lucide-react";
+import { Briefcase, AlertCircle, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+
+const LIMIT = 10;
+
+interface Job {
+  _id: string;
+  title: string;
+  jobType: string;
+  expirationDate: string;
+}
 
 function getDaysRemaining(expirationDate: string): { label: string; expired: boolean } {
   if (!expirationDate) return { label: "No expiry", expired: false };
@@ -28,31 +35,42 @@ function getDaysRemaining(expirationDate: string): { label: string; expired: boo
 }
 
 export default function MyJobsList() {
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await api.get("/api/jobs");
-        setJobs(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJobs();
-  }, []);
+  const fetchJobs = async (page: number) => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/api/jobs?page=${page}&limit=${LIMIT}`);
+      setJobs(res.data.jobs as Job[]);
+      setTotal(res.data.total);
+      setTotalPages(res.data.totalPages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchJobs(1); }, []);
 
   const handleDeleted = () => {
     setDeleteTarget(null);
-    // Re-fetch list after deletion
-    setLoading(true);
-    api.get("/api/jobs").then(res => setJobs(res.data)).finally(() => setLoading(false));
+    // If we deleted the last item on a page > 1, go back one page
+    const targetPage = jobs.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+    setCurrentPage(targetPage);
+    fetchJobs(targetPage);
+  };
+
+  const goToPage = (p: number) => {
+    setCurrentPage(p);
+    fetchJobs(p);
   };
 
   useEffect(() => {
@@ -78,7 +96,7 @@ export default function MyJobsList() {
     <div className="w-full h-full px-8 py-10 pb-28 overflow-y-auto overflow-x-hidden no-scrollbar">
       <h1 className="text-[26px] font-semibold text-gray-900 mb-7 tracking-tight">My Jobs</h1>
 
-      {!jobs.length ? (
+      {!total ? (
         <div className="bg-white border border-[#E9EAEF] rounded-[10px] p-14 flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-[#EBEDFF] text-[#5B5CE2] rounded-full flex items-center justify-center mb-4">
             <Briefcase className="w-7 h-7" />
@@ -92,6 +110,7 @@ export default function MyJobsList() {
           </Link>
         </div>
       ) : (
+        <>
         <div className="bg-white rounded-[10px] border border-[#E9EAEF]" ref={menuRef}>
           {/* Table Header */}
           <div className="grid grid-cols-[1fr_140px_180px_160px] bg-gray-50 border-b border-[#E9EAEF] px-7 py-3.5 rounded-t-[10px]">
@@ -101,7 +120,7 @@ export default function MyJobsList() {
             <span className="text-[13px] font-medium text-gray-500">Actions</span>
           </div>
 
-          {jobs.map((job: any, idx: number) => {
+          {jobs.map((job: Job, idx: number) => {
             const { label: daysLabel, expired } = getDaysRemaining(job.expirationDate);
             const isMenuOpen = openMenu === job._id;
 
@@ -112,13 +131,11 @@ export default function MyJobsList() {
                   idx !== jobs.length - 1 ? "border-b border-[#F0F1F7]" : ""
                 }`}
               >
-                {/* Job Info */}
                 <div>
                   <p className="font-semibold text-[15px] text-gray-900 mb-1">{job.title}</p>
                   <p className="text-[13px] text-gray-400">{job.jobType}&nbsp;&nbsp;•&nbsp;&nbsp;{daysLabel}</p>
                 </div>
 
-                {/* Status */}
                 <div className="flex items-center gap-1.5">
                   {expired ? (
                     <><AlertCircle className="w-4 h-4 text-orange-500 flex-shrink-0" /><span className="text-[13.5px] font-medium text-orange-500">Expired</span></>
@@ -127,13 +144,11 @@ export default function MyJobsList() {
                   )}
                 </div>
 
-                {/* Applications */}
                 <div className="flex items-center gap-2 text-gray-500 text-[13.5px]">
                   <Image src={usersGroup3} alt="Applications" width={16} height={16} />
                   <span>0 Applications</span>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-3">
                   <Link href={`/my-jobs?tab=viewJob&jobId=${job._id}`}>
                     <button className="px-5 py-2 text-[13.5px] text-[#5B5CE2] bg-[#EBEDFF] hover:bg-[#dfe1fa] font-medium rounded-full transition-colors whitespace-nowrap">
@@ -175,6 +190,47 @@ export default function MyJobsList() {
             );
           })}
         </div>
+
+        {/* Pagination — only shown when totalPages > 1 */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 px-1">
+            <p className="text-[13.5px] text-gray-400">
+              Showing <span className="font-medium text-gray-700">{(currentPage - 1) * LIMIT + 1}–{Math.min(currentPage * LIMIT, total)}</span> of <span className="font-medium text-gray-700">{total}</span> jobs
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-[#E9EAEF] text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p)}
+                  className={`w-9 h-9 flex items-center justify-center rounded-full text-[13.5px] font-medium transition-colors border ${
+                    p === currentPage
+                      ? "bg-[#5B5CE2] text-white border-[#5B5CE2]"
+                      : "border-[#E9EAEF] text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-[#E9EAEF] text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
 

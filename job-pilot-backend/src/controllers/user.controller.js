@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const Job = require('../models/job.model');
 const { uploadFromBuffer } = require('../utils/cloudinaryHelper');
 
 // @desc    Update company profile
@@ -67,6 +68,30 @@ const updateCompanyProfile = async (req, res, next) => {
   }
 };
 
+// @desc    Delete user account and all associated jobs
+// @route   DELETE /api/user/delete-account
+// @access  Private
+const deleteAccount = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    // Delete all jobs posted by this user
+    await Job.deleteMany({ employer: req.user.id });
+
+    // Delete the user account
+    await User.findByIdAndDelete(req.user.id);
+
+    res.status(200).json({ message: 'Account and associated jobs deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   updateCompanyProfile,
+  deleteAccount,
 };

@@ -36,13 +36,26 @@ const getJobById = async (req, res, next) => {
   }
 };
 
-// @desc    Get all jobs for logged-in employer
-// @route   GET /api/jobs
+// @desc    Get all jobs for logged-in employer (paginated)
+// @route   GET /api/jobs?page=1&limit=10
 // @access  Private
 const getMyJobs = async (req, res, next) => {
   try {
-    const jobs = await Job.find({ employer: req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json(jobs);
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 10);
+    const skip  = (page - 1) * limit;
+
+    const [jobs, total] = await Promise.all([
+      Job.find({ employer: req.user.id }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Job.countDocuments({ employer: req.user.id }),
+    ]);
+
+    res.status(200).json({
+      jobs,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     next(error);
   }

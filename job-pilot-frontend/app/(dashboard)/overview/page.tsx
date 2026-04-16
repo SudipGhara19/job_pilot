@@ -52,8 +52,8 @@ export default function OverviewPage() {
     if (!currentUser) { router.push("/login"); return; }
     const fetchJobs = async () => {
       try {
-        const res = await api.get("/api/jobs");
-        setJobs(res.data);
+        const res = await api.get("/api/jobs?page=1&limit=10");
+        setJobs(res.data.jobs as Job[]);
       } catch (e) {
         console.error(e);
       } finally {
@@ -66,7 +66,8 @@ export default function OverviewPage() {
   const handleDeleted = () => {
     setDeleteTarget(null);
     setLoading(true);
-    api.get("/api/jobs").then(res => setJobs(res.data)).finally(() => setLoading(false));
+    api.get("/api/jobs?page=1&limit=10").then(res => setJobs(res.data.jobs as Job[])).finally(() => setLoading(false));
+
   };
 
   // Close dropdown on outside click
